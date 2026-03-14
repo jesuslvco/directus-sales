@@ -1,0 +1,12 @@
+{
+  "name": "directus-extension-sale-tx",
+  "version": "1.0.0",
+  "description": "Transactional sale finalize endpoint for Directus",
+  "type": "module",
+  "directus:extension": {
+    "type": "endpoint",
+    "path": "dist/index.js",
+    "source": "dist/index.js",
+    "host": "^10.0.0 || ^11.0.0"
+  }
+}

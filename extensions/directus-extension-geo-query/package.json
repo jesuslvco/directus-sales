@@ -1,0 +1,12 @@
+{
+  "name": "directus-extension-geo-query",
+  "version": "1.0.0",
+  "description": "Geospatial query endpoints for Directus (PostgreSQL + PostGIS)",
+  "type": "module",
+  "directus:extension": {
+    "type": "endpoint",
+    "path": "dist/index.js",
+    "source": "dist/index.js",
+    "host": "^10.0.0 || ^11.0.0"
+  }
+}

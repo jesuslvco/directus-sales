@@ -1,0 +1,12 @@
+{
+  "name": "directus-extension-health-custom",
+  "version": "1.0.0",
+  "description": "Custom health endpoint for Directus",
+  "type": "module",
+  "directus:extension": {
+    "type": "endpoint",
+    "path": "dist/index.js",
+    "source": "dist/index.js",
+    "host": "^10.0.0 || ^11.0.0"
+  }
+}
