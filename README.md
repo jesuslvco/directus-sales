@@ -175,5 +175,5 @@ curl https://<tu-app>.up.railway.app/geo-query/capabilities \
 
 - `EXTENSIONS_PATH` está definido en el `Dockerfile` como `/directus/extensions`.
 - El contenedor usa `HOST=0.0.0.0` para aceptar conexiones externas (requisito típico en Railway).
-- `sale-tx` ya ejecuta en transacción; la lógica de negocio (escrituras reales) se agrega dentro del bloque transaccional del endpoint.
+- `sale-tx` ejecuta una transacción real: valida inventario, crea `sales`, crea `sale_items`, descuenta `product_stock` y registra `stock_movements`.
 - `geo-query` está orientado a colecciones con campos geográficos (`geometry`) y pensado para PostgreSQL + PostGIS.
