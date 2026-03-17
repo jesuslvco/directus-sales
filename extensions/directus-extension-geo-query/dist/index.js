@@ -16,6 +16,12 @@ const parseLimit = (value, fallback = 50) => {
   return fallback;
 };
 
+const parseOffset = (value, fallback = 0) => {
+  const parsed = Number(value);
+  if (Number.isFinite(parsed) && parsed >= 0) return parsed;
+  return fallback;
+};
+
 const toNumber = (value) => {
   const num = Number(value);
   return Number.isFinite(num) ? num : null;
@@ -151,7 +157,90 @@ export default {
           ok: true,
           source: 'directus-extension-geo-query',
           route: '/geo-query/nearby',
-          data: { count: rows.length, rows },
+          data: rows,
+          meta: { count: rows.length },
+        });
+      } catch (error) {
+        return next(error);
+      }
+    });
+
+    router.post('/search-nearby-estabs', async (req, res, next) => {
+      if (!ensureAuth(req, res)) return;
+      if (!ensurePostgres(database, res)) return;
+
+      const {
+        q,
+        lat,
+        lng,
+        radiusMeters = 20000,
+        limit = 15,
+        offset = 0,
+      } = req.body ?? {};
+
+      const term = String(q || '').trim();
+      const latitude = toNumber(lat);
+      const longitude = toNumber(lng);
+      const radius = toNumber(radiusMeters);
+      const safeLimit = parseLimit(limit, 15);
+      const safeOffset = parseOffset(offset, 0);
+
+      if (!term) {
+        return res.status(400).json({ ok: false, error: 'q is required' });
+      }
+
+      if (latitude == null || longitude == null) {
+        return res.status(400).json({ ok: false, error: 'lat and lng are required' });
+      }
+
+      if (radius == null || radius <= 0) {
+        return res.status(400).json({ ok: false, error: 'radiusMeters must be > 0' });
+      }
+
+      try {
+        const likeTerm = `%${term}%`;
+        const result = await database.raw(
+          `
+          SELECT
+            e.id,
+            e.name,
+            e.type,
+            e.slogan,
+            e.active,
+            MIN(ST_DistanceSphere(b.location, ST_SetSRID(ST_MakePoint(?, ?), 4326))) AS distance_meters
+          FROM estabs e
+          INNER JOIN branches b ON b.estab_id = e.id
+          WHERE
+            e.active = 1
+            AND b.location IS NOT NULL
+            AND ST_DWithin(
+              b.location::geography,
+              ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography,
+              ?
+            )
+            AND (
+              e.name ILIKE ?
+              OR COALESCE(e.keywords, '') ILIKE ?
+              OR COALESCE(e.search_keywords, '') ILIKE ?
+            )
+          GROUP BY e.id, e.name, e.type, e.slogan, e.active
+          ORDER BY distance_meters ASC
+          LIMIT ? OFFSET ?
+          `,
+          [longitude, latitude, longitude, latitude, radius, likeTerm, likeTerm, likeTerm, safeLimit, safeOffset]
+        );
+
+        const rows = extractRows(result);
+        return res.status(200).json({
+          ok: true,
+          source: 'directus-extension-geo-query',
+          route: '/geo-query/search-nearby-estabs',
+          data: rows,
+          meta: {
+            count: rows.length,
+            limit: safeLimit,
+            offset: safeOffset,
+          },
         });
       } catch (error) {
         return next(error);
@@ -198,7 +287,8 @@ export default {
           ok: true,
           source: 'directus-extension-geo-query',
           route: '/geo-query/intersects-bbox',
-          data: { count: rows.length, rows },
+          data: rows,
+          meta: { count: rows.length },
         });
       } catch (error) {
         return next(error);
@@ -240,7 +330,8 @@ export default {
           ok: true,
           source: 'directus-extension-geo-query',
           route: '/geo-query/intersects-geojson',
-          data: { count: rows.length, rows },
+          data: rows,
+          meta: { count: rows.length },
         });
       } catch (error) {
         return next(error);
