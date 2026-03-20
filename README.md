@@ -66,6 +66,9 @@ La extensión `directus-extension-geo-query` registra:
 
 - `GET /geo-query/capabilities`
 - `POST /geo-query/nearby`
+- `POST /geo-query/search-nearby-estabs`
+- `POST /geo-query/metrics/ingest`
+- `GET /geo-query/popular/estabs`
 - `POST /geo-query/intersects-bbox`
 - `POST /geo-query/intersects-geojson`
 
@@ -123,6 +126,23 @@ curl -X POST http://localhost:8055/geo-query/nearby \
 
 ```bash
 curl http://localhost:8055/geo-query/capabilities \
+  -H 'Authorization: Bearer <TOKEN>'
+```
+
+```bash
+curl -X POST http://localhost:8055/geo-query/metrics/ingest \
+  -H 'Authorization: Bearer <TOKEN>' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "events": [
+      { "eventType": "search_impression", "estabId": 4, "regionId": 1, "count": 1 },
+      { "eventType": "search_click", "estabId": 4, "regionId": 1, "count": 1 }
+    ]
+  }'
+```
+
+```bash
+curl "http://localhost:8055/geo-query/popular/estabs?regionId=1&days=7&limit=15" \
   -H 'Authorization: Bearer <TOKEN>'
 ```
 
