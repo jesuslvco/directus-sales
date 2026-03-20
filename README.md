@@ -142,7 +142,7 @@ curl -X POST http://localhost:8055/geo-query/metrics/ingest \
 ```
 
 ```bash
-curl "http://localhost:8055/geo-query/popular/estabs?regionId=1&days=7&limit=15" \
+curl "http://localhost:8055/geo-query/popular/estabs?regionId=1&days=7&limit=15&maxGold=2&maxSilver=2" \
   -H 'Authorization: Bearer <TOKEN>'
 ```
 

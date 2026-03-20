@@ -43,6 +43,54 @@ const normalizeMetricDate = (value) => {
   return date.toISOString().slice(0, 10);
 };
 
+const normalizeMembership = (value) => String(value || 'standard').toLowerCase().trim();
+
+const applyMembershipCaps = ({
+  rows = [],
+  limit = 15,
+  maxGold = 2,
+  maxSilver = 2,
+}) => {
+  const selected = [];
+  const leftovers = [];
+  let goldCount = 0;
+  let silverCount = 0;
+
+  for (const row of rows) {
+    const type = normalizeMembership(row?.type);
+    if (selected.length >= limit) break;
+
+    if (type === 'gold') {
+      if (goldCount < maxGold) {
+        selected.push(row);
+        goldCount += 1;
+      } else {
+        leftovers.push(row);
+      }
+      continue;
+    }
+
+    if (type === 'silver') {
+      if (silverCount < maxSilver) {
+        selected.push(row);
+        silverCount += 1;
+      } else {
+        leftovers.push(row);
+      }
+      continue;
+    }
+
+    selected.push(row);
+  }
+
+  for (const row of leftovers) {
+    if (selected.length >= limit) break;
+    selected.push(row);
+  }
+
+  return selected.slice(0, limit);
+};
+
 const getClientName = (database) => {
   return database?.client?.config?.client || '';
 };
@@ -430,6 +478,8 @@ export default {
       const days = Math.max(1, Math.min(parseLimit(req.query?.days, 7), 30));
       const limit = parseLimit(req.query?.limit, 15);
       const offset = parseOffset(req.query?.offset, 0);
+      const maxGold = Math.max(0, Math.min(parseLimit(req.query?.maxGold, 2), limit));
+      const maxSilver = Math.max(0, Math.min(parseLimit(req.query?.maxSilver, 2), limit));
 
       const whereRegion = regionId == null ? '' : 'AND m.region_id = ?';
 
@@ -466,17 +516,25 @@ export default {
         );
 
         const rows = extractRows(raw);
+        const rankedRows = applyMembershipCaps({
+          rows,
+          limit,
+          maxGold,
+          maxSilver,
+        });
         return res.status(200).json({
           ok: true,
           source: 'directus-extension-geo-query',
           route: '/geo-query/popular/estabs',
-          data: rows,
+          data: rankedRows,
           meta: {
-            count: rows.length,
+            count: rankedRows.length,
             regionId: regionId == null ? null : regionId,
             days,
             limit,
             offset,
+            maxGold,
+            maxSilver,
           },
         });
       } catch (error) {
