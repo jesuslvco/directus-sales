@@ -1,0 +1,12 @@
+{
+  "name": "directus-extension-purchase-tx",
+  "version": "1.0.0",
+  "description": "Transactional purchase order and receiving endpoints for Directus",
+  "type": "module",
+  "directus:extension": {
+    "type": "endpoint",
+    "path": "dist/index.js",
+    "source": "dist/index.js",
+    "host": "^10.0.0 || ^11.0.0"
+  }
+}
