@@ -78,6 +78,59 @@ export default {
       });
     });
 
+    router.post('/set-default-supplier', async (req, res, next) => {
+      const route = '/purchase-tx/set-default-supplier';
+      const userId = ensureAuthenticated(req, res, route);
+      if (!userId) return;
+
+      const payload = req.body ?? {};
+      const productId = toPositiveNumber(payload.product_id);
+      const supplierId =
+        payload.supplier_id == null || payload.supplier_id === ''
+          ? null
+          : toPositiveNumber(payload.supplier_id);
+
+      if (!Number.isFinite(productId) || (supplierId != null && !Number.isFinite(supplierId))) {
+        return res.status(400).json({
+          ok: false,
+          source: SOURCE,
+          route,
+          error: 'product_id is required and supplier_id must be null or a positive number.',
+        });
+      }
+
+      try {
+        const result = await database.transaction(async (trx) => {
+          await trx.raw('select public.set_product_default_supplier(?::integer, ?::integer)', [
+            productId,
+            supplierId,
+          ]);
+
+          const nowValue = trx.fn.now();
+          await trx('products')
+            .where({ id: productId })
+            .update({
+              updated_at: nowValue,
+            });
+
+          return {
+            product_id: productId,
+            supplier_id: supplierId,
+            updated_by: userId,
+          };
+        });
+
+        return res.status(200).json({
+          ok: true,
+          source: SOURCE,
+          route,
+          data: result,
+        });
+      } catch (error) {
+        return next(error);
+      }
+    });
+
     router.post('/set-default-supplier-bulk', async (req, res, next) => {
       const route = '/purchase-tx/set-default-supplier-bulk';
       const userId = ensureAuthenticated(req, res, route);
