@@ -5,7 +5,7 @@ const PRICE_FIELD = 'price';
 const LAST_PRICE_DATE_FIELD = 'last_price_date';
 const LAST_SALE_DATE_FIELD = 'last_sale_date';
 const LAST_ORDER_DATE_FIELD = 'last_order_date';
-const PENDING_PROCUREMENT_FIELD = 'pending_procurement_qty';
+const STOCK_QUANTITY_FIELD = 'quantity';
 const BUSINESS_TIME_ZONE = 'America/Mexico_City';
 
 const isObject = (value) => value !== null && typeof value === 'object';
@@ -96,35 +96,36 @@ export default ({ filter }, { database, logger }) => {
   });
 
   filter(`${STOCK_COLLECTION}.items.create`, async (payload) => {
-    const pendingQuantity = toNumber(payload?.[PENDING_PROCUREMENT_FIELD], 0);
-    if (pendingQuantity <= 0) return payload;
+    const receivedQuantity = toNumber(payload?.[STOCK_QUANTITY_FIELD], 0);
+    if (receivedQuantity <= 0) return payload;
 
+    // Una existencia inicial positiva representa recepción de piezas.
     await updateProductDate(database, [payload?.product_id], LAST_ORDER_DATE_FIELD);
     return payload;
   });
 
   filter(`${STOCK_COLLECTION}.items.update`, async (payload, meta) => {
-    if (!hasField(payload, PENDING_PROCUREMENT_FIELD)) return payload;
+    if (!hasField(payload, STOCK_QUANTITY_FIELD)) return payload;
 
     const keys = getUpdateKeys(meta);
     if (keys.length === 0) {
-      logger.warn('[product-audit] No se recibieron IDs de stock para validar el pedido.');
+      logger.warn('[product-audit] No se recibieron IDs de stock para validar la recepción.');
       return payload;
     }
 
     const currentRows = await database(STOCK_COLLECTION)
-      .select('id', 'product_id', PENDING_PROCUREMENT_FIELD)
+      .select('id', 'product_id', STOCK_QUANTITY_FIELD)
       .whereIn('id', keys);
 
-    const nextPendingQuantity = toNumber(payload[PENDING_PROCUREMENT_FIELD], 0);
-    const requestedProductIds = currentRows
+    const nextStockQuantity = toNumber(payload[STOCK_QUANTITY_FIELD], 0);
+    const receivedProductIds = currentRows
       .filter((row) => {
-        const previousPendingQuantity = toNumber(row[PENDING_PROCUREMENT_FIELD], 0);
-        return nextPendingQuantity > 0 && nextPendingQuantity !== previousPendingQuantity;
+        const previousStockQuantity = toNumber(row[STOCK_QUANTITY_FIELD], 0);
+        return nextStockQuantity > previousStockQuantity;
       })
       .map((row) => row.product_id);
 
-    await updateProductDate(database, requestedProductIds, LAST_ORDER_DATE_FIELD);
+    await updateProductDate(database, receivedProductIds, LAST_ORDER_DATE_FIELD);
     return payload;
   });
 };
