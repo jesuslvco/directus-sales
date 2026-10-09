@@ -1,0 +1,12 @@
+{
+  "name": "directus-extension-product-audit",
+  "version": "1.0.0",
+  "description": "Automatic product audit dates for Directus",
+  "type": "module",
+  "directus:extension": {
+    "type": "hook",
+    "path": "dist/index.js",
+    "source": "dist/index.js",
+    "host": "^10.0.0 || ^11.0.0"
+  }
+}

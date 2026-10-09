@@ -3,6 +3,20 @@ const toNumber = (value, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const BUSINESS_TIME_ZONE = 'America/Mexico_City';
+
+const todayInBusinessTimeZone = () => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: BUSINESS_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+};
+
 const normalizeItems = (items) => {
   if (!Array.isArray(items)) return [];
 
@@ -75,6 +89,7 @@ export default {
         const sale = await database.transaction(async (trx) => {
           const requestedByProduct = sumRequestedByProduct(normalizedItems);
           const productIds = Array.from(requestedByProduct.keys());
+          const saleDate = todayInBusinessTimeZone();
 
           const stockRows = await trx('product_stock')
             .where('branch_id', branchId)
@@ -138,6 +153,10 @@ export default {
               quantity: requestedQty,
               notes: `Venta ${createdSale.id}`,
             });
+
+            await trx('products')
+              .where('id', productId)
+              .update({ last_sale_date: saleDate });
           }
 
           return {
